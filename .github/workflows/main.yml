@@ -1,0 +1,50 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: リポジトリのチェックアウト
+      uses: actions/checkout@v4
+
+    - name: .NET 10 セットアップ
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: シングルファイル発行
+      run: |
+        dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+
+    - name: 配布用パッケージ (Zip) の作成
+      shell: pwsh
+      run: |
+        $distDir = "./M3U_Radio_Player"
+        New-Item -ItemType Directory -Path $distDir -Force
+
+        # 発行された exe のコピー
+        Copy-Item "./publish/M3U Radio Player.exe" -Destination $distDir/
+
+        # 同梱ライブラリ・設定ファイル等のコピー
+        if (Test-Path "bass.dll") { Copy-Item "bass.dll" -Destination $distDir/ }
+        if (Test-Path "bassasio.dll") { Copy-Item "bassasio.dll" -Destination $distDir/ }
+        if (Test-Path "bassflac.dll") { Copy-Item "bassflac.dll" -Destination $distDir/ }
+        if (Test-Path "M3U Radio Player.ico") { Copy-Item "M3U Radio Player.ico" -Destination $distDir/ }
+        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ }
+        Get-ChildItem -Path . -Filter "*.m3u" | Copy-Item -Destination $distDir/
+
+        # Zip 圧縮
+        Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_${{ github.ref_name }}.zip"
+
+    - name: GitHub Releases へアップロード
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./M3U_Radio_Player_${{ github.ref_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

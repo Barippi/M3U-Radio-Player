@@ -33,20 +33,21 @@ jobs:
       shell: pwsh
       run: |
         $distDir = "./M3U_Radio_Player"
+        if (Test-Path $distDir) { Remove-Item $distDir -Recurse -Force }
         New-Item -ItemType Directory -Path $distDir -Force
 
         # 発行された exe のコピー
         Get-ChildItem "./publish/*.exe" | Copy-Item -Destination $distDir/
 
-        # 同梱 DLL / アイコン / Readme / プレイリストのコピー
-        Get-ChildItem -Filter "*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
+        # 同梱 DLL / アイコン / Readme / プレイリストのコピー (作成先フォルダやビルドフォルダを除外)
+        Get-ChildItem -Filter "*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
         if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ }
 
-        # バージョンタグ名の決定 (タグなし実行の場合はコミットハッシュを使用)
+        # バージョンタグ名の決定
         $ver = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
-        Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_$ver.zip"
+        Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_$ver.zip" -Force
 
     - name: GitHub Releases へアップロード
       if: startsWith(github.ref, 'refs/tags/')

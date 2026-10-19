@@ -39,7 +39,7 @@ jobs:
         Copy-Item -Path "./publish/*" -Destination $distDir/ -Recurse -Force
 
         # 2. リポジトリルートにある BASS DLL / アイコン / Readme / プレイリストを上書き・追加コピー
-# プロジェクト内またはルートにある DLL / ico / m3u を探してコピー
+        # プロジェクト内またはルートにある DLL / ico / m3u を探してコピー
         Get-ChildItem -Filter "bass*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
         Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
         Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ -Force }

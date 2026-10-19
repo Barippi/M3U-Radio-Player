@@ -4,7 +4,7 @@
 
 100％ Vibe Coding.
 
-Use .Net 10. So, if the program dosen't move at your computer, please install [.Net 10 Runtime Library](https://dotnet.microsoft.com/ja-jp/download/dotnet/10.0).
+Use .Net 10. So, if the program dosen't move at your computer, please install [.Net 10 Desktop Runtime Library](https://dotnet.microsoft.com/ja-jp/download/dotnet/10.0).
 
 ## Screenshot
 

@@ -2,8 +2,11 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - master       # main ブランチへの通常の push でも動くように追加
     tags:
-      - 'v*'
+      - 'v*'       # v1.0.0 などのタグ push でも動く
+  workflow_dispatch: # GitHub の Web 画面から「Run workflow」ボタンで手動実行可能にする
 
 jobs:
   build:

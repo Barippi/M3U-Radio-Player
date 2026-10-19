@@ -24,10 +24,9 @@ jobs:
     - name: シングルファイル発行
       shell: pwsh
       run: |
-        # リポジトリ内の .csproj ファイルを自動検索して発行
         $proj = (Get-ChildItem -Filter *.csproj -Recurse | Select-Object -First 1).FullName
         Write-Host "Publishing project: $proj"
-        dotnet publish $proj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+        dotnet publish $proj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
 
     - name: 配布用パッケージ (Zip) の作成
       shell: pwsh
@@ -36,16 +35,19 @@ jobs:
         if (Test-Path $distDir) { Remove-Item $distDir -Recurse -Force }
         New-Item -ItemType Directory -Path $distDir -Force
 
-        # 発行された exe のコピー
-        Get-ChildItem "./publish/*.exe" | Copy-Item -Destination $distDir/
+        # 1. dotnet publish で生成された全成果物 (exe, wpf系ネイティブdll含む) を丸ごとコピー
+        Copy-Item -Path "./publish/*" -Destination $distDir/ -Recurse -Force
 
-        # 同梱 DLL / アイコン / Readme / プレイリストのコピー (作成先フォルダやビルドフォルダを除外)
-        Get-ChildItem -Filter "*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
-        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ }
+        # 2. リポジトリルートにある BASS DLL / アイコン / Readme / プレイリストを上書き・追加コピー
+        Get-ChildItem -Filter "*.dll" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.ico" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.m3u" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
+        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ -Force }
 
-        # バージョンタグ名の決定
+        # 不要なデバッグ用シンボル (pdb) を除外
+        Get-ChildItem -Path $distDir -Filter "*.pdb" | Remove-Item -Force
+
+        # Zip 圧縮
         $ver = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
         Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_$ver.zip" -Force
 

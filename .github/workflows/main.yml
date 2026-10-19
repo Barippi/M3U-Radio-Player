@@ -32,25 +32,37 @@ jobs:
       shell: pwsh
       run: |
         $distDir = "./M3U_Radio_Player"
-        if (Test-Path $distDir) { Remove-Item $distDir -Recurse -Force }
-        New-Item -ItemType Directory -Path $distDir -Force
+        if (Test-Path $distDir) {
+            Remove-Item -Path $distDir -Recurse -Force
+        }
+        New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 
-        # 1. dotnet publish で生成された全成果物 (exe, wpf系ネイティブdll含む) を丸ごとコピー
+        # 1. dotnet publish の出力物（exe、wpf関連dll等）をコピー
         Copy-Item -Path "./publish/*" -Destination $distDir/ -Recurse -Force
 
-        # 2. リポジトリルートにある BASS DLL / アイコン / Readme / プレイリストを上書き・追加コピー
-        # プロジェクト内またはルートにある DLL / ico / m3u を探してコピー
-        Get-ChildItem -Filter "bass*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ -Force }
+        # 2. リポジトリ内の BASS ライブラリ、アイコン、Readme、m3u を明示的にコピー
+        $copyTargets = @("bass.dll", "bassasio.dll", "bassflac.dll", "M3U Radio Player.ico", "README.md")
+        foreach ($file in $copyTargets) {
+            $found = Get-ChildItem -Filter $file -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Select-Object -First 1
+            if ($found) {
+                Copy-Item -Path $found.FullName -Destination $distDir/ -Force
+                Write-Host "Included: $($found.Name)"
+            }
+        }
 
-        # 不要なデバッグ用シンボル (pdb) を除外
+        # プレイリスト (*.m3u) のコピー
+        Get-ChildItem -Filter "*.m3u" -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $distDir/ -Force
+            Write-Host "Included playlist: $($_.Name)"
+        }
+
+        # 不要なデバッグシンボル (pdb) を削除
         Get-ChildItem -Path $distDir -Filter "*.pdb" | Remove-Item -Force
 
-        # Zip 圧縮
+        # 3. Zip 圧縮
         $ver = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
         Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_$ver.zip" -Force
-
+        
     - name: GitHub Releases へアップロード
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2

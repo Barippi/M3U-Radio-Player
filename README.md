@@ -6,6 +6,12 @@
 
 Use .Net 10. So, if the program dosen't move at your computer, please install .Net 10 Runtime Library.
 
+## Screenshot
+
+<img width="680" height="820" alt="image" src="https://github.com/user-attachments/assets/e200410f-bfae-4ca0-9891-35a5d065cc30" />
+
+
+
 ## Credits & Licenses
 
 This software uses the following third-party libraries:

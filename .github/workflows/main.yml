@@ -3,10 +3,10 @@ name: Build and Release
 on:
   push:
     branches:
-      - master       # main ブランチへの通常の push でも動くように追加
+      - master
     tags:
-      - 'v*'       # v1.0.0 などのタグ push でも動く
-  workflow_dispatch: # GitHub の Web 画面から「Run workflow」ボタンで手動実行可能にする
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,14 +16,18 @@ jobs:
     - name: リポジトリのチェックアウト
       uses: actions/checkout@v4
 
-    - name: .NET 10 セットアップ
+    - name: .NET セットアップ
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
 
     - name: シングルファイル発行
+      shell: pwsh
       run: |
-        dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+        # リポジトリ内の .csproj ファイルを自動検索して発行
+        $proj = (Get-ChildItem -Filter *.csproj -Recurse | Select-Object -First 1).FullName
+        Write-Host "Publishing project: $proj"
+        dotnet publish $proj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
 
     - name: 配布用パッケージ (Zip) の作成
       shell: pwsh
@@ -32,22 +36,22 @@ jobs:
         New-Item -ItemType Directory -Path $distDir -Force
 
         # 発行された exe のコピー
-        Copy-Item "./publish/M3U Radio Player.exe" -Destination $distDir/
+        Get-ChildItem "./publish/*.exe" | Copy-Item -Destination $distDir/
 
-        # 同梱ライブラリ・設定ファイル等のコピー
-        if (Test-Path "bass.dll") { Copy-Item "bass.dll" -Destination $distDir/ }
-        if (Test-Path "bassasio.dll") { Copy-Item "bassasio.dll" -Destination $distDir/ }
-        if (Test-Path "bassflac.dll") { Copy-Item "bassflac.dll" -Destination $distDir/ }
-        if (Test-Path "M3U Radio Player.ico") { Copy-Item "M3U Radio Player.ico" -Destination $distDir/ }
+        # 同梱 DLL / アイコン / Readme / プレイリストのコピー
+        Get-ChildItem -Filter "*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } | Copy-Item -Destination $distDir/ -Force
         if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ }
-        Get-ChildItem -Path . -Filter "*.m3u" | Copy-Item -Destination $distDir/
 
-        # Zip 圧縮
-        Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_${{ github.ref_name }}.zip"
+        # バージョンタグ名の決定 (タグなし実行の場合はコミットハッシュを使用)
+        $ver = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "latest" }
+        Compress-Archive -Path "$distDir/*" -DestinationPath "./M3U_Radio_Player_$ver.zip"
 
     - name: GitHub Releases へアップロード
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
-        files: ./M3U_Radio_Player_${{ github.ref_name }}.zip
+        files: ./M3U_Radio_Player_*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

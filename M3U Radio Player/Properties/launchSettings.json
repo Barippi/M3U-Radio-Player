@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "M3U Radio Player (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "M3U Radio Player (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

@@ -39,10 +39,10 @@ jobs:
         Copy-Item -Path "./publish/*" -Destination $distDir/ -Recurse -Force
 
         # 2. リポジトリルートにある BASS DLL / アイコン / Readme / プレイリストを上書き・追加コピー
-        Get-ChildItem -Filter "*.dll" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.ico" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
-        Get-ChildItem -Filter "*.m3u" | Where-Object { $_.DirectoryName -eq (Get-Location).Path } | Copy-Item -Destination $distDir/ -Force
-        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ -Force }
+# プロジェクト内またはルートにある DLL / ico / m3u を探してコピー
+        Get-ChildItem -Filter "bass*.dll" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.ico" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force
+        Get-ChildItem -Filter "*.m3u" -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|M3U_Radio_Player)\\' } | Copy-Item -Destination $distDir/ -Force        if (Test-Path "README.md") { Copy-Item "README.md" -Destination $distDir/ -Force }
 
         # 不要なデバッグ用シンボル (pdb) を除外
         Get-ChildItem -Path $distDir -Filter "*.pdb" | Remove-Item -Force

@@ -4,6 +4,7 @@
 
 100％ Vibe Coding.
 
+Use .Net 10. So, if the program dosen't move at your computer, please install .Net 10 Runtime Library.
 
 ## Credits & Licenses
 
